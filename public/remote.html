@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AeroVigil X — Remote Operator Terminal</title>
+
+<!-- Three.js, OrbitControls & GLTFLoader -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+<!-- Local Styles & Scripts -->
+<link rel="stylesheet" href="remote.css" />
+<script src="three-mast.js"></script>
+</head>
+<body>
+
+<!-- Top Navigation Bar -->
+<div class="top-bar">
+  <h1>🎮 AeroVigil X — Remote Tactical Console</h1>
+  <div class="auth-badge unauth" id="authBadge">🔒 UNAUTHENTICATED</div>
+</div>
+
+<!-- API Key Authentication Modal -->
+<div class="auth-modal-overlay" id="authOverlay">
+  <div class="auth-card">
+    <h2>🔑 Anti-Drone Remote API Key Auth</h2>
+    <p>Enter your authorized API Key to establish secure control over the AeroVigil X C-UAV System.</p>
+
+    <label style="font-size:11px;color:#789db1;display:block;margin-bottom:6px">API KEY (X-API-KEY)</label>
+    <input type="text" id="apiKeyInput" class="key-input" placeholder="e.g. AVX-RMT-3381-KEY" value="AVX-RMT-3381-KEY">
+
+    <div class="presets-box">
+      <b>Quick Select Authorization Keys:</b><br>
+      <span class="preset-key">AVX-RMT-3381-KEY</span>
+      <span class="preset-key">AVX-CMD-9948-KEY</span>
+      <span class="preset-key">AVX-DEMO-2026-KEY</span>
+    </div>
+
+    <button class="auth-btn" id="authSubmitBtn">CONNECT & OPERATE SYSTEM</button>
+  </div>
+</div>
+
+<!-- Main Remote Controller Layout -->
+<div class="remote-layout">
+  <!-- 3D Anti-Drone System Viewport -->
+  <div class="viewport-panel">
+    <div class="viewport-head">
+      <h3 style="font-size:14px;color:#e9f7ff">📡 3D Anti-Drone Mast System — Live Viewport</h3>
+      <span style="font-size:11px;color:#20e99a">● Real-time Remote Sync</span>
+    </div>
+    <div class="three-viewport" id="remote3DCanvas">
+      <div class="viewport-hud">
+        <b>PAN:</b> <span id="hudPan" style="color:#19cfff">45.0°</span><br>
+        <b>TILT:</b> <span id="hudTilt" style="color:#19cfff">15.0°</span><br>
+        <b>TARGET:</b> <span style="color:#ff3f55">Drone #D-01 (1.2km)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Operator Control Deck -->
+  <div class="deck-panel">
+    <!-- PTZ Virtual Joystick -->
+    <div class="deck-section">
+      <h3>🕹 PTZ Gimbal Joystick (Pan / Tilt)</h3>
+      <div class="joystick-grid">
+        <div></div>
+        <button class="joy-btn" onclick="movePTZ(0, 10)">▲</button>
+        <div></div>
+
+        <button class="joy-btn" onclick="movePTZ(-15, 0)">◄</button>
+        <button class="joy-btn" onclick="resetPTZ()" style="font-size:11px">CENTER</button>
+        <button class="joy-btn" onclick="movePTZ(15, 0)">►</button>
+
+        <div></div>
+        <button class="joy-btn" onclick="movePTZ(0, -10)">▼</button>
+        <div></div>
+      </div>
+
+      <div class="slider-container">
+        <label>Radar Rotation Speed: <b id="radarRpmVal" style="color:#19cfff">24 RPM</b></label>
+        <input type="range" id="radarRpmSlider" min="0" max="60" value="24" oninput="updateRadarSpeed(this.value)">
+      </div>
+    </div>
+
+    <!-- Tactical Countermeasures Action Deck -->
+    <div class="deck-section">
+      <h3>⚡ Tactical Countermeasures Deck</h3>
+      <div class="action-grid">
+        <button class="action-btn btn-jam" onclick="triggerJammer()">
+          <span style="font-size:18px">🔴</span>
+          RF JAMMER PULSE
+        </button>
+
+        <button class="action-btn btn-laser" onclick="triggerLaser()">
+          <span style="font-size:18px">⚡</span>
+          LASER DAZZLER
+        </button>
+
+        <button class="action-btn btn-track" onclick="autoTrackTarget()">
+          <span style="font-size:18px">🎯</span>
+          LOCK TARGET #D-01
+        </button>
+
+        <button class="action-btn btn-lock" onclick="toggleGeofenceLock()">
+          <span style="font-size:18px">🛡</span>
+          GEOFENCE LOCK
+        </button>
+      </div>
+    </div>
+
+    <!-- API Command Log Terminal -->
+    <div class="deck-section">
+      <h3>📟 Real-Time API & Control Log</h3>
+      <div class="log-terminal" id="logTerminal">
+        <div class="log-line"><span class="time">[INIT]</span> Operator console ready. Please authenticate.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="remote.js"></script>
+</body>
+</html>

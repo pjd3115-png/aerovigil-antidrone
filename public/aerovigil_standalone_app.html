@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AeroVigil X — High Altitude Anti-Drone C-UAV Platform (Standalone Web App)</title>
+
+<!-- Leaflet.js CDN -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Three.js & OrbitControls & GLTFLoader -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+<!-- Google Font -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" />
+
+<style>
+/* Dashboard Base Styles */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: #020c1b;
+    color: #e2f1f8;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+}
+
+:root {
+    --bg-dark: #020c1b;
+    --panel-bg: rgba(6, 24, 43, 0.85);
+    --panel-border: #0d466e;
+    --cyan: #19cfff;
+    --blue-glow: #0077ff;
+    --green: #20e99a;
+    --red: #ff3f55;
+    --red-bg: rgba(255, 63, 85, 0.15);
+    --yellow: #ffd42d;
+    --muted: #7496ab;
+}
+
+button { font: inherit; cursor: pointer; }
+
+/* Top Header Bar */
+.top-header {
+    height: 64px;
+    background: linear-gradient(180deg, #051a2e 0%, #031221 100%);
+    border-bottom: 1px solid #0d466e;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 18px;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.brand-box { display: flex; align-items: center; gap: 10px; min-width: 260px; }
+.logo-icon {
+    width: 38px; height: 38px; background: radial-gradient(circle, #084c78 0%, #031526 100%);
+    border: 1.5px solid var(--cyan); border-radius: 50%; display: grid; place-items: center;
+    color: var(--cyan); font-weight: 800; font-size: 20px; box-shadow: 0 0 12px rgba(25, 207, 255, 0.35);
+}
+.brand-title { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+.brand-title span { color: var(--cyan); }
+.brand-sub { font-size: 9.5px; color: #7f9fb3; letter-spacing: 0.8px; display: block; font-weight: 500; }
+.prototype-tag { border: 1px solid var(--cyan); border-radius: 5px; padding: 4px 10px; color: var(--cyan); font-weight: 700; font-size: 11px; background: rgba(25, 207, 255, 0.08); letter-spacing: 0.5px; }
+
+.top-right-status { margin-left: auto; display: flex; align-items: center; gap: 16px; font-size: 11.5px; color: #8daec0; }
+
+.mode-switch-box { display: flex; align-items: center; gap: 6px; background: #03182b; border: 1px solid var(--cyan); padding: 3px 8px; border-radius: 20px; }
+.mode-btn { border: none; background: none; color: #799cad; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 14px; cursor: pointer; transition: all 0.2s; }
+.mode-btn.active-auto { background: linear-gradient(135deg, #19cfff, #0877b3); color: #020c1b; box-shadow: 0 0 10px rgba(25, 207, 255, 0.5); }
+.mode-btn.active-manual { background: linear-gradient(135deg, #ffd42d, #b58d04); color: #020c1b; box-shadow: 0 0 10px rgba(255, 212, 45, 0.5); }
+
+.iff-badge { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; display: inline-block; }
+.iff-friendly { background: rgba(32, 233, 154, 0.15); border: 1px solid var(--green); color: var(--green); }
+.iff-hostile { background: rgba(255, 63, 85, 0.18); border: 1px solid var(--red); color: #ff7583; }
+
+.app-container { display: flex; min-height: calc(100vh - 64px); }
+.sidebar { width: 210px; background: #031525; border-right: 1px solid #0c3d5d; padding: 16px 10px; flex-shrink: 0; display: flex; flex-direction: column; }
+.nav-item { width: 100%; border: 0; background: none; color: #8faec2; padding: 11px 12px; text-align: left; border-radius: 6px; cursor: pointer; margin-bottom: 3px; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 10px; transition: all 0.2s; }
+.nav-item:hover, .nav-item.active { color: #fff; background: linear-gradient(90deg, #0968a8, #053359); box-shadow: inset 3px 0 var(--cyan); }
+.main-content { flex-grow: 1; padding: 14px 16px; overflow-y: auto; }
+
+.metrics-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 12px; }
+.metric-card { background: linear-gradient(145deg, #051c2f 0%, #031322 100%); border: 1px solid #0d4a73; border-radius: 8px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; }
+.metric-info { display: flex; flex-direction: column; }
+.metric-title { font-size: 10px; color: #87a7ba; font-weight: 600; text-transform: uppercase; }
+.metric-value { font-size: 22px; font-weight: 700; margin-top: 4px; line-height: 1; }
+
+.middle-grid { display: grid; grid-template-columns: 2.1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.panel-box { background: rgba(5, 22, 38, 0.85); border: 1px solid #0c436b; border-radius: 8px; padding: 12px; }
+.panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.panel-title { font-size: 13px; font-weight: 700; color: #d1eaee; display: flex; align-items: center; gap: 6px; }
+
+#map { height: 350px; width: 100%; border-radius: 6px; }
+.feeds-2x2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.feed-card { background: #020c19; border: 1px solid #0d466e; border-radius: 6px; height: 140px; position: relative; padding: 6px; overflow: hidden; cursor: pointer; }
+.feed-badge { position: absolute; top: 6px; left: 8px; font-size: 9.5px; font-weight: 700; z-index: 10; }
+.feed-canvas-elem { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; }
+
+.active-alert-card { margin-top: 10px; background: linear-gradient(135deg, rgba(73, 18, 28, 0.9) 0%, rgba(30, 8, 14, 0.95) 100%); border: 1px solid #ff3f55; border-radius: 6px; padding: 10px; box-shadow: 0 0 14px rgba(255, 63, 85, 0.25); }
+.alert-action-btn { background: linear-gradient(135deg, #ff3f55 0%, #b81d30 100%); border: none; color: #fff; font-size: 11px; font-weight: 700; padding: 7px 12px; border-radius: 4px; box-shadow: 0 0 10px rgba(255, 63, 85, 0.4); }
+
+.hardware-3d-box { height: 300px; width: 100%; border-radius: 6px; overflow: hidden; background: #030c18; }
+.angle-btn-bar { display: flex; gap: 6px; margin-bottom: 8px; }
+.angle-btn { background: #041a2e; border: 1px solid #0d4a73; color: var(--cyan); padding: 4px 10px; border-radius: 4px; font-size: 10.5px; font-weight: 600; }
+
+.bottom-4col { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.status-rows p { display: flex; justify-content: space-between; font-size: 11px; padding: 5px 0; border-bottom: 1px solid #0a3352; }
+
+.sensor-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
+.sensor-card { background: #031526; border: 1px solid #0d4a73; border-radius: 6px; padding: 10px; cursor: pointer; transition: all 0.2s; }
+.sensor-card:hover { border-color: var(--cyan); transform: translateY(-2px); }
+.sensor-title { font-size: 11.5px; font-weight: 700; color: var(--cyan); display: flex; align-items: center; gap: 6px; }
+.sensor-desc { font-size: 10.5px; color: #92b3c7; margin-top: 4px; line-height: 1.4; }
+
+.footer-bar { margin-top: 16px; border-top: 1px solid #0c436b; padding-top: 10px; display: flex; justify-content: space-between; font-size: 11px; color: #688ea4; }
+.toast { position: fixed; bottom: 20px; right: 20px; background: #093c61; border: 1px solid var(--cyan); color: #fff; padding: 10px 16px; border-radius: 6px; font-size: 12px; z-index: 9000; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+.toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- Top Navigation Header -->
+<header class="top-header">
+  <div class="brand-box">
+    <div class="logo-icon">V</div>
+    <div>
+      <div class="brand-title">AeroVigil <span>X</span></div>
+      <span class="brand-sub">AI-POWERED COUNTER-DRONE SYSTEM</span>
+    </div>
+  </div>
+
+  <div class="prototype-tag">STANDALONE APP</div>
+
+  <div class="top-right-status">
+    <div class="mode-switch-box">
+      <span style="font-size:10px;color:#799cad;font-weight:bold">MODE:</span>
+      <button id="btnModeAuto" class="mode-btn" onclick="setAttackMode('AUTOMATIC')">🤖 AUTO</button>
+      <button id="btnModeManual" class="mode-btn active-manual" onclick="setAttackMode('AUTOMATIC')">👨‍✈️ MANUAL</button>
+    </div>
+
+    <button id="audioToggleBtn" onclick="toggleAudio()" style="background:#093452;border:1px solid var(--cyan);color:var(--cyan);padding:4px 10px;border-radius:4px;font-size:11px;font-weight:600">🔊 Sound On</button>
+    <span id="clock" style="font-family:monospace;font-weight:600">14:32:17</span>
+    <div class="location-badge">📍 Ladakh Sector <small style="color:#688ea4">(34.18° N, 77.58° E)</small></div>
+  </div>
+</header>
+
+<div class="app-container">
+  <!-- Sidebar Navigation -->
+  <aside class="sidebar">
+    <button class="nav-item active" data-tab="dashboard">⌂ Dashboard</button>
+    <button class="nav-item" data-tab="live-map">◈ Live Map</button>
+    <button class="nav-item" data-tab="sensor-feeds">◉ Sensor Feeds</button>
+    <button class="nav-item" data-tab="threats">⚠ Threats & IFF</button>
+    <button class="nav-item" data-tab="3d-system">📡 3D Hardware Pole</button>
+    <button class="nav-item" data-tab="mission-log">▤ Drone History</button>
+    <button class="nav-item" data-tab="reports">▣ Export Report PDF</button>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    
+    <!-- PAGE 1: MAIN DASHBOARD -->
+    <div id="tab-dashboard" class="tab-page">
+      <div class="metrics-row">
+        <div class="metric-card">
+          <div class="metric-info">
+            <span class="metric-title">Active Threat Target</span>
+            <span class="metric-value" style="color:var(--red)">#<span class="val-drone-id">D-01</span></span>
+            <span class="iff-badge iff-hostile">🔴 HOSTILE (शत्रूचा धोका)</span>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-info">
+            <span class="metric-title">Friendly UAV Patrol</span>
+            <span class="metric-value" style="color:var(--green)">F-101</span>
+            <span class="iff-badge iff-friendly">🟢 FRIENDLY (आपले ड्रोन)</span>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-info">
+            <span class="metric-title">System Attack Mode</span>
+            <span class="metric-value" id="modeCardVal" style="color:var(--yellow);font-size:18px">MANUAL</span>
+            <span style="font-size:10px;color:#8daec0">Operator Choice</span>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-info">
+            <span class="metric-title">Radar Module</span>
+            <span class="metric-value" style="color:var(--cyan);font-size:18px">360° RADOME</span>
+            <span style="font-size:10px;color:var(--green)">● Active (5km Range)</span>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-info">
+            <span class="metric-title">Battery Power</span>
+            <span class="metric-value" style="color:var(--green)">94%</span>
+            <span style="font-size:10px;color:#8daec0">4-Panel Solar Charging</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="middle-grid">
+        <section class="panel-box">
+          <div class="panel-header">
+            <div class="panel-title">◈ Live Satellite Map — Click Pole or Drone to Inspect 3D Model</div>
+            <span style="color:var(--green);font-size:11px">● Live Telemetry</span>
+          </div>
+          <div id="map"></div>
+        </section>
+
+        <section class="panel-box">
+          <div class="panel-header">
+            <div class="panel-title">▣ Live Camera Vision Streams</div>
+            <span style="color:var(--green);font-size:10px">● LIVE CAMERA FEED</span>
+          </div>
+
+          <div class="feeds-2x2">
+            <div class="feed-card" onclick="openFullCameraView('EO')">
+              <span class="feed-badge" style="color:var(--green)">● EO Optical Vision (Visual 1080p)</span>
+              <canvas id="eoFeedCanvas" class="feed-canvas-elem" width="280" height="132"></canvas>
+            </div>
+
+            <div class="feed-card" onclick="openFullCameraView('IR')">
+              <span class="feed-badge" style="color:var(--green)">● IR Thermal LWIR Heatmap</span>
+              <canvas id="irFeedCanvas" class="feed-canvas-elem" width="280" height="132"></canvas>
+            </div>
+
+            <div class="feed-card">
+              <span class="feed-badge" style="color:var(--green)">● RF Spectrum Analyzer</span>
+              <canvas id="rfSpectrumCanvas" class="feed-canvas-elem" width="260" height="90" style="margin-top:14px"></canvas>
+            </div>
+
+            <div class="feed-card" style="padding:10px">
+              <span class="feed-badge" style="color:var(--green)">● IFF Transponder Status</span>
+              <div style="font-size:11px;line-height:1.8;margin-top:18px">
+                Hostile Target: <b style="color:var(--red)">D-01 (Enemy UAV)</b><br>
+                Friendly Target: <b style="color:var(--green)">F-101 (Army Quad)</b><br>
+                Status: <span class="iff-badge iff-hostile">HOSTILE LOCK</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="active-alert-card" id="alertBox">
+            <div class="alert-head">
+              <span>⚠ Hostile Threat Alert (IFF Warning)</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;margin-top:6px">
+              <div class="alert-details">
+                <b style="color:#fff;font-size:12px">Drone #<span class="val-drone-id">D-01</span> <span class="iff-badge iff-hostile">🔴 ENEMY THREAT</span></b><br>
+                Distance: <span class="val-dist">1.2 km</span> | Altitude: <span class="val-alt">450 m</span> | Speed: <span class="val-speed">35 km/h</span>
+              </div>
+              <button class="alert-action-btn" onclick="acknowledgeAlert()">Take Action</button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- 3D HARDWARE POLE PANEL -->
+      <section class="panel-box">
+        <div class="panel-header">
+          <div class="panel-title">📡 3D Anti-Drone Hardware Mast System (Reference Match)</div>
+          <span style="color:var(--cyan);font-size:11px">Click Any Hardware Component to Inspect Specs</span>
+        </div>
+
+        <div class="angle-btn-bar">
+          <button class="angle-btn" onclick="set3DView('front')">📷 Front View</button>
+          <button class="angle-btn" onclick="set3DView('side')">📷 Side View</button>
+          <button class="angle-btn" onclick="set3DView('back')">📷 Back View</button>
+          <button class="angle-btn" onclick="set3DView('top')">📷 Top View</button>
+          <button class="angle-btn" onclick="set3DView('perspective')">📷 3/4 Perspective</button>
+          <button class="angle-btn" style="border-color:var(--yellow);color:var(--yellow)" onclick="loadCustomGLBModel()">📦 Load Generated-Model.glb</button>
+          <button class="angle-btn" style="border-color:var(--green);color:var(--green);margin-left:auto" onclick="toggleInternalDoor()">⚙ Open Internal Enclosure View</button>
+        </div>
+
+        <div class="hardware-3d-box" id="hardware3dCanvas"></div>
+      </section>
+
+      <!-- SENSOR BREAKDOWN DETAILS -->
+      <section class="panel-box" style="margin-top:12px">
+        <div class="panel-header">
+          <div class="panel-title">🔬 Detailed Hardware Sensor Breakdown</div>
+        </div>
+        <div class="sensor-grid">
+          <div class="sensor-card" onclick="showComponentModal('360° White Radome Radar', 'AESA Radar Module detecting RF signals & tracking drone flight trajectory up to 5km radius.')">
+            <div class="sensor-title">📡 360° Radar Radome</div>
+            <div class="sensor-desc">AESA RF Radar | 5km Range | 2.4-5.8 GHz Band</div>
+          </div>
+          <div class="sensor-card" onclick="showComponentModal('EO Optical Camera', '1080p PTZ Daylight Optical Camera with 30x optical zoom and YOLOv8 neural network object detection.')">
+            <div class="sensor-title">📷 EO Optical Camera</div>
+            <div class="sensor-desc">1080p Day PTZ | 30x Optical Zoom | Target Lock</div>
+          </div>
+          <div class="sensor-card" onclick="showComponentModal('IR Thermal LWIR Camera', 'Long-Wave Infrared LWIR heat sensor with 640x512 resolution for night vision drone tracking.')">
+            <div class="sensor-title">🌡️ IR Thermal Camera</div>
+            <div class="sensor-desc">LWIR Heatmap | 640x512 Res | Night Vision</div>
+          </div>
+          <div class="sensor-card" onclick="showComponentModal('4-Panel Solar Canopy', 'Monocrystalline photovoltaic solar array generating 600W continuous off-grid power.')">
+            <div class="sensor-title">☀️ 4-Panel Solar Canopy</div>
+            <div class="sensor-desc">Monocrystalline | 600W Output | Off-Grid</div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- PAGE: REPORTS -->
+    <div id="tab-reports" class="tab-page" style="display:none">
+      <div class="panel-box">
+        <div class="panel-header"><div class="panel-title">▣ Threat Analytics & Defense Report PDF Export</div></div>
+        <p style="font-size:12px;color:#92b1c4;margin-top:10px">Generate official defense telemetry reports including IFF detections, crash GPS locations, and sensor health logs.</p>
+        <button class="alert-action-btn" style="margin-top:14px" onclick="generateDefenseReportPDF()">📥 Export Defense Telemetry Report (PDF)</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Interactive Pole 3D Model Viewport Modal -->
+<div id="pole3DModal" style="display:none;position:fixed;inset:0;background:rgba(2,11,20,0.92);backdrop-filter:blur(8px);z-index:7500;place-items:center">
+  <div style="width:720px;background:#04182b;border:2px solid var(--cyan);border-radius:12px;padding:20px;box-shadow:0 0 40px rgba(25,207,255,0.4)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h3 id="poleModalTitle" style="font-size:16px;color:var(--cyan)">📡 Anti-Drone Hardware Mast Tower (3D Viewport)</h3>
+      <button onclick="closePole3DModal()" class="alert-action-btn" style="background:#093452;border:1px solid var(--cyan);padding:4px 12px">✖ CLOSE</button>
+    </div>
+    <div style="height:360px;width:100%;border-radius:8px;overflow:hidden;background:#020c18" id="poleModal3DCanvas"></div>
+    <div style="display:flex;gap:6px;margin-top:12px">
+      <button class="angle-btn" onclick="modalSet3DView('front')">📷 Front</button>
+      <button class="angle-btn" onclick="modalSet3DView('side')">📷 Side</button>
+      <button class="angle-btn" onclick="modalSet3DView('top')">📷 Top</button>
+      <button class="angle-btn" onclick="modalSet3DView('perspective')">📷 3/4 Perspective</button>
+      <button class="angle-btn" style="border-color:var(--yellow);color:var(--yellow)" onclick="modalLoadGLB()">📦 Load Generated-Model.glb</button>
+      <button class="angle-btn" style="border-color:var(--green);color:var(--green);margin-left:auto" onclick="modalToggleInternalDoor()">⚙ Open Door</button>
+    </div>
+  </div>
+</div>
+
+<!-- Interactive 3D Enemy Threat Drone Inspector Modal -->
+<div id="enemyDroneModal" style="display:none;position:fixed;inset:0;background:rgba(2,11,20,0.94);backdrop-filter:blur(10px);z-index:8000;place-items:center">
+  <div style="width:680px;background:#091422;border:2px solid var(--red);border-radius:12px;padding:22px;box-shadow:0 0 45px rgba(255,63,85,0.5)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div>
+        <h3 style="font-size:17px;color:var(--red);display:flex;align-items:center;gap:8px">
+          <span>🛸</span> 3D ENEMY THREAT DRONE INSPECTOR
+        </h3>
+        <span style="font-size:11px;color:#8cb0c4">Target ID: <b style="color:var(--cyan)" id="enemyDroneModalId">D-01</b> | Status: <span class="iff-badge iff-hostile">🔴 HOSTILE ENEMY THREAT</span></span>
+      </div>
+      <button onclick="closeEnemyDroneModal()" class="alert-action-btn" style="background:#490b12;border:1px solid var(--red);padding:4px 12px">✖ CLOSE INSPECTOR</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:14px">
+      <div style="height:320px;background:#020b18;border:1px solid #14597d;border-radius:8px;overflow:hidden" id="enemyDrone3DCanvas"></div>
+
+      <div style="background:#04182b;border:1px solid #0e4f7a;border-radius:8px;padding:14px;font-size:11.5px;line-height:1.8;color:#d1eaee">
+        <b style="color:var(--cyan);display:block;margin-bottom:6px;border-bottom:1px solid #0e4f7a;padding-bottom:4px">🎯 Target Flight Physics</b>
+        Type: <b>Quadcopter Recon UAV</b><br>
+        Speed: <b style="color:var(--yellow)" class="val-speed">35 km/h</b><br>
+        Altitude: <b style="color:var(--cyan)" class="val-alt">450 m</b><br>
+        Distance: <b style="color:var(--red)" class="val-dist">1.2 km NE</b><br>
+        RF Frequency: <b>2.42 GHz Peak</b><br>
+        Heading Vector: <b>231° Inbound</b><br>
+
+        <div style="margin-top:12px">
+          <b style="color:var(--red);display:block;margin-bottom:6px">⚔ Countermeasure Action:</b>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <button class="alert-action-btn" style="background:#7c121e;padding:8px;font-size:10.5px" onclick="triggerJammerDirect()">🔴 RF JAMMER</button>
+            <button class="alert-action-btn" style="background:#11577a;padding:8px;font-size:10.5px" onclick="triggerLaserDirect()">⚡ LASER DAZZLER</button>
+            <button class="alert-action-btn" style="background:#6e580e;padding:8px;font-size:10.5px" onclick="triggerGeofenceDirect()">🛡 GEOFENCE</button>
+            <button class="alert-action-btn" style="background:#0e5e40;padding:8px;font-size:10.5px" onclick="triggerMonitorDirect()">👁 MONITOR</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toastbox"></div>
+
+<!-- 3D Engine Library -->
+<script src="three-mast.js"></script>
+
+<!-- Dashboard Simulation Script -->
+<script src="dashboard.js"></script>
+</body>
+</html>
