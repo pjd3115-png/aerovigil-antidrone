@@ -285,6 +285,54 @@ button { font: inherit; cursor: pointer; }
         <div class="hardware-3d-box" id="hardware3dCanvas"></div>
       </section>
 
+      <!-- ESP32-CAM AI LIVE SURVEILLANCE CARD -->
+      <section class="panel-box" style="margin-top:12px">
+        <div class="panel-header">
+          <div class="panel-title">🤖 ESP32-CAM AI Live Object Surveillance</div>
+          <span class="panel-live" id="esp32Status">● CONNECTING</span>
+        </div>
+
+        <div style="background:#061829;border:1px solid #0d5482;border-radius:10px;padding:16px;margin-top:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <h3 style="margin:0;font-size:15px;color:var(--cyan);display:flex;align-items:center;gap:8px">
+              📹 Live Camera (ESP32-CAM)
+            </h3>
+            <div style="font-size:12px;color:#8fa3b5">Target: <b>Drone / Water Bottle</b></div>
+          </div>
+
+          <div style="position:relative;width:100%;background:#000;border-radius:8px;overflow:hidden;min-height:260px;display:flex;justify-content:center;align-items:center;border:1px solid #114c73">
+            <img id="esp32Camera" src="http://192.168.43.12/stream" alt="ESP32-CAM Live Stream" style="width:100%;max-height:450px;object-fit:contain;display:block" onload="esp32CameraOnline()" onerror="esp32CameraOffline()">
+            <div id="esp32ScanBox" style="position:absolute;width:220px;height:150px;border:2px solid #00ff88;display:none;pointer-events:none;box-shadow:0 0 15px #00ff88"></div>
+          </div>
+
+          <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <input id="esp32Ip" value="192.168.43.12" placeholder="ESP32-CAM IP (e.g. 192.168.43.12)" style="flex:1;min-width:200px;padding:9px 12px;border-radius:6px;border:1px solid #1c5d87;background:#051321;color:#fff;font-size:12px;font-weight:600">
+            <button onclick="connectEsp32Camera()" style="border:0;padding:9px 16px;border-radius:6px;background:#00a86b;color:white;cursor:pointer;font-weight:bold;font-size:12px">Connect Camera</button>
+            <button onclick="startEsp32Detection()" style="border:0;padding:9px 16px;border-radius:6px;background:#087eb0;color:white;cursor:pointer;font-weight:bold;font-size:12px">Start AI Detection</button>
+          </div>
+
+          <div style="margin-top:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+            <div style="background:#041525;border-radius:8px;padding:10px;border:1px solid #0c436b">
+              <div style="color:#8fa3b5;font-size:10px;font-weight:700">CAMERA STATUS</div>
+              <div id="esp32CameraStatus" style="margin-top:4px;font-size:15px;font-weight:bold;color:#00ff88">ONLINE</div>
+            </div>
+            <div style="background:#041525;border-radius:8px;padding:10px;border:1px solid #0c436b">
+              <div style="color:#8fa3b5;font-size:10px;font-weight:700">DETECTED OBJECT</div>
+              <div id="esp32Object" style="margin-top:4px;font-size:15px;font-weight:bold;color:var(--cyan)">Waiting...</div>
+            </div>
+            <div style="background:#041525;border-radius:8px;padding:10px;border:1px solid #0c436b">
+              <div style="color:#8fa3b5;font-size:10px;font-weight:700">CONFIDENCE</div>
+              <div id="esp32Confidence" style="margin-top:4px;font-size:15px;font-weight:bold;color:var(--yellow)">--</div>
+            </div>
+          </div>
+
+          <div style="margin-top:10px;background:#041525;border-radius:8px;padding:10px;border:1px solid #0c436b">
+            <div style="color:#8fa3b5;font-size:10px;font-weight:700">AI DETECTION STATUS</div>
+            <div id="esp32DetectionStatus" style="margin-top:4px;font-size:12px;font-weight:bold;color:#799cad">AI Detection OFF</div>
+          </div>
+        </div>
+      </section>
+
       <!-- SENSOR BREAKDOWN DETAILS -->
       <section class="panel-box" style="margin-top:12px">
         <div class="panel-header">

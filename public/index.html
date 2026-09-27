@@ -297,13 +297,64 @@
     <!-- PAGE 3: SENSOR FEEDS EXPANDED -->
     <div id="tab-sensor-feeds" class="tab-page" style="display:none">
       <div class="panel-box">
-        <div class="panel-header"><div class="panel-title">◉ Multi-Sensor Surveillance Suite</div></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px">
-          <div class="feed-card" style="height:320px">
-            <span class="feed-badge" style="color:var(--green)">● High Definition EO Visual Stream (1080p PTZ)</span>
+        <div class="panel-header">
+          <div class="panel-title">🤖 ESP32-CAM AI Live Object Surveillance Suite & Multi-Sensor Feeds</div>
+          <span class="panel-live" id="esp32Status">● CONNECTING</span>
+        </div>
+        
+        <div class="camera-card-esp32" style="margin-top:12px;background:#061829;border:1px solid #0d5482;border-radius:12px;padding:18px;">
+          <div class="camera-title" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <h2 style="margin:0;font-size:16px;color:var(--cyan);display:flex;align-items:center;gap:8px">
+              📹 Live ESP32-CAM Stream & AI Object Detection
+            </h2>
+            <div style="font-size:12px;color:#8fa3b5">Target: <b>Drone / Water Bottle</b></div>
           </div>
-          <div class="feed-card" style="height:320px">
+
+          <div class="video-container-esp32" style="position:relative;width:100%;background:#000;border-radius:10px;overflow:hidden;min-height:280px;display:flex;justify-content:center;align-items:center;border:1px solid #114c73">
+            <img id="esp32Camera" src="http://192.168.43.12/stream" alt="ESP32-CAM Live Stream" style="width:100%;max-height:480px;object-fit:contain;display:block" onload="esp32CameraOnline()" onerror="esp32CameraOffline()">
+            <div class="scan-box" id="esp32ScanBox" style="position:absolute;width:240px;height:160px;border:2px solid #00ff88;display:none;pointer-events:none;box-shadow:0 0 15px #00ff88;animation:pulseScan 2s infinite ease-in-out;"></div>
+          </div>
+
+          <div class="controls-esp32" style="margin-top:14px;display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+            <input id="esp32Ip" value="192.168.43.12" placeholder="ESP32-CAM IP (e.g. 192.168.43.12)" style="flex:1;min-width:220px;padding:10px 14px;border-radius:8px;border:1px solid #1c5d87;background:#051321;color:#fff;font-size:13px;font-weight:600">
+            <button onclick="connectEsp32Camera()" style="border:0;padding:10px 18px;border-radius:8px;background:#00a86b;color:white;cursor:pointer;font-weight:bold;font-size:13px">Connect Camera</button>
+            <button onclick="startEsp32Detection()" style="border:0;padding:10px 18px;border-radius:8px;background:#087eb0;color:white;cursor:pointer;font-weight:bold;font-size:13px">Start AI Detection</button>
+          </div>
+
+          <div class="info-esp32" style="margin-top:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+            <div class="box-esp32" style="background:#041525;border-radius:10px;padding:12px;border:1px solid #0c436b">
+              <div class="label" style="color:#8fa3b5;font-size:11px;font-weight:700">CAMERA STATUS</div>
+              <div class="value detected" id="esp32CameraStatus" style="margin-top:6px;font-size:16px;font-weight:bold;color:#00ff88">ONLINE</div>
+            </div>
+            <div class="box-esp32" style="background:#041525;border-radius:10px;padding:12px;border:1px solid #0c436b">
+              <div class="label" style="color:#8fa3b5;font-size:11px;font-weight:700">DETECTED OBJECT</div>
+              <div class="value" id="esp32Object" style="margin-top:6px;font-size:16px;font-weight:bold;color:var(--cyan)">Waiting...</div>
+            </div>
+            <div class="box-esp32" style="background:#041525;border-radius:10px;padding:12px;border:1px solid #0c436b">
+              <div class="label" style="color:#8fa3b5;font-size:11px;font-weight:700">CONFIDENCE</div>
+              <div class="value" id="esp32Confidence" style="margin-top:6px;font-size:16px;font-weight:bold;color:var(--yellow)">--</div>
+            </div>
+          </div>
+
+          <div class="box-esp32" style="margin-top:12px;background:#041525;border-radius:10px;padding:12px;border:1px solid #0c436b">
+            <div class="label" style="color:#8fa3b5;font-size:11px;font-weight:700">AI DETECTION STATUS</div>
+            <div class="value" id="esp32DetectionStatus" style="margin-top:6px;font-size:13px;font-weight:bold;color:#799cad">AI Detection OFF</div>
+          </div>
+
+          <div style="margin-top:14px;color:#8fa3b5;font-size:12px;line-height:1.6;background:#03101c;padding:12px;border-radius:8px;border:1px solid #0a3859">
+            <b>Camera IP:</b> 192.168.43.12 &nbsp;|&nbsp; 🧴 <b>Target Objects:</b> Water Bottle / Threat Quadcopter UAV<br>
+            The ESP32-CAM streams live video directly from your local Wi-Fi network. Click <b>Connect Camera</b> to update IP, and <b>Start AI Detection</b> to launch target locking.
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+          <div class="feed-card" style="height:260px">
+            <span class="feed-badge" style="color:var(--green)">● High Definition EO Visual Stream (1080p PTZ)</span>
+            <canvas id="tabEoCanvas" width="500" height="200" style="width:100%;height:190px;margin-top:10px;border-radius:6px;background:#000"></canvas>
+          </div>
+          <div class="feed-card" style="height:260px">
             <span class="feed-badge" style="color:var(--green)">● Thermal IR Long-Wave Heatmap (640x512)</span>
+            <canvas id="tabIrCanvas" width="500" height="200" style="width:100%;height:190px;margin-top:10px;border-radius:6px;background:#000"></canvas>
           </div>
         </div>
       </div>
