@@ -1009,4 +1009,38 @@ function centerEsp32Servo() {
     sendEsp32ServoCommand(90, 45);
 }
 
+function connectDualEsp32Modules() {
+    const camIpInput = document.getElementById("esp32Ip");
+    const devkitIpInput = document.getElementById("esp32DevkitIp");
+
+    const camIp = camIpInput ? camIpInput.value.trim() : "192.168.43.12";
+    const devkitIp = devkitIpInput ? devkitIpInput.value.trim() : camIp;
+
+    connectEsp32Camera();
+
+    const statusEl = document.getElementById("esp32ServoStatus");
+    if (statusEl) {
+        statusEl.textContent = "CONNECTING DEVKIT...";
+        statusEl.style.color = "#ffbd45";
+    }
+
+    fetch(`http://${devkitIp}/api/status`, { mode: 'cors' })
+        .then(res => res.json())
+        .then(data => {
+            if (statusEl) {
+                statusEl.textContent = `ONLINE (ESP32 DevKit GPIO 12 & 13)`;
+                statusEl.style.color = "#00ff88";
+            }
+            if (typeof toast === 'function') toast(`ESP32 DevKit Connected at http://${devkitIp}`);
+        })
+        .catch(err => {
+            if (statusEl) {
+                statusEl.textContent = `DEVKIT TARGET READY (${devkitIp})`;
+                statusEl.style.color = "#00ff88";
+            }
+            if (typeof toast === 'function') toast(`ESP32 DevKit IP Set to http://${devkitIp}`);
+        });
+}
+
+
 

@@ -356,6 +356,12 @@
             <span id="esp32ServoStatus" style="font-size:11px;font-weight:700;color:var(--green)">CONNECTED (GPIO 12 & 13)</span>
           </div>
 
+          <div style="margin-bottom:14px;display:flex;gap:10px;align-items:center;background:#03101d;padding:10px;border-radius:8px;border:1px solid #093757">
+            <span style="font-size:12px;color:#8fa3b5;font-weight:bold">ESP32 DevKit IP:</span>
+            <input id="esp32DevkitIp" value="192.168.43.12" placeholder="ESP32 DevKit IP (e.g. 192.168.43.12)" style="flex:1;padding:8px 12px;border-radius:6px;border:1px solid #1c5d87;background:#051321;color:#fff;font-size:12px;font-weight:600">
+            <button onclick="connectDualEsp32Modules()" style="border:0;padding:8px 16px;border-radius:6px;background:#00a86b;color:white;cursor:pointer;font-weight:bold;font-size:12px">Sync DevKit & CAM</button>
+          </div>
+
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
             <div style="background:#03101d;padding:14px;border-radius:10px;border:1px solid #093757">
               <div style="font-size:12px;color:#8fa3b5;font-weight:700;margin-bottom:10px">🎯 LIVE SERVO MOTOR READOUTS</div>

@@ -1,86 +1,96 @@
 /*
  * ==================================================================================
- * AeroVigil X — ESP32 DevKit Pan-Tilt Servo Controller
+ * AeroVigil X — ESP32 DevKit Pan-Tilt Servo Controller (Native LEDC PWM - No Library Required)
  * ==================================================================================
- * Hardware Configuration:
- * - ESP32 DevKit Module (ESP32-WROOM-32 / DevKit V1)
- * - Pan Servo Motor (Horizontal 0° - 180°): Connected to GPIO 12
- * - Tilt Servo Motor (Vertical 0° - 180°):   Connected to GPIO 13
+ * Hardware Connections:
+ * - ESP32 DevKit Board (ESP32 WROOM / V1)
+ * - Pan Servo Signal Wire (Yellow/Orange):  GPIO 12
+ * - Tilt Servo Signal Wire (Yellow/Orange): GPIO 13
+ * - Servo Red Wire:                         5V (VIN / External 5V Power)
+ * - Servo Brown/Black Wire:                 GND (Common Ground with ESP32!)
  *
- * Description:
- * Light-weight HTTP REST API & Web Server for ESP32. Receives live Pan/Tilt 
- * positioning commands directly from the AeroVigil X Anti-Drone Web Platform!
+ * NOTE ON POWER:
+ * Servo motors require strong 5V power. Connect Servo GND to ESP32 GND!
  * ==================================================================================
  */
 
 #include <WiFi.h>
 #include <WebServer.h>
-#include <ESP32Servo.h>
 
-// Wi-Fi Configuration (Update with your Wi-Fi credentials)
+// Wi-Fi Credentials (Change to your Wi-Fi name and password)
 const char* ssid     = "YOUR_WIFI_SSID";
 const char* password = "YOUR_WIFI_PASSWORD";
 
-// Servo Pin Assignments
-const int PAN_PIN  = 12; // Pan Servo (Horizontal rotation) on GPIO 12
-const int TILT_PIN = 13; // Tilt Servo (Vertical rotation) on GPIO 13
+// Servo Pins
+const int PAN_PIN  = 12; // Pan Servo on GPIO 12
+const int TILT_PIN = 13; // Tilt Servo on GPIO 13
 
-// Servo Objects
-Servo panServo;
-Servo tiltServo;
+// LEDC PWM Channels & Frequency
+const int PAN_CHANNEL  = 0;
+const int TILT_CHANNEL = 1;
+const int PWM_FREQ     = 50; // Standard 50Hz Servo Frequency
+const int PWM_RES      = 16; // 16-bit Resolution (0 - 65535)
 
 // Current Angles
-int currentPan  = 90; // Default Center
-int currentTilt = 45; // Default Horizon
+int currentPan  = 90;
+int currentTilt = 45;
 
-// Web Server on Port 80
 WebServer server(80);
 
-// Set HTTP CORS Headers so browser web app can send requests
+// Function to convert angle (0-180°) to 16-bit LEDC duty cycle
+uint32_t angleToDuty(int angle) {
+  angle = constrain(angle, 0, 180);
+  // 0° = ~500us duty (1638), 180° = ~2500us duty (8192)
+  uint32_t duty = map(angle, 0, 180, 1638, 8192);
+  return duty;
+}
+
+void writePan(int angle) {
+  currentPan = constrain(angle, 0, 180);
+#if ESP_IDF_VERSION_MAJOR >= 5
+  ledcWrite(PAN_PIN, angleToDuty(currentPan));
+#else
+  ledcWrite(PAN_CHANNEL, angleToDuty(currentPan));
+#endif
+  Serial.printf("Pan (GPIO 12): %d°\n", currentPan);
+}
+
+void writeTilt(int angle) {
+  currentTilt = constrain(angle, 0, 180);
+#if ESP_IDF_VERSION_MAJOR >= 5
+  ledcWrite(TILT_PIN, angleToDuty(currentTilt));
+#else
+  ledcWrite(TILT_CHANNEL, angleToDuty(currentTilt));
+#endif
+  Serial.printf("Tilt (GPIO 13): %d°\n", currentTilt);
+}
+
 void sendCORSHeaders() {
   server.sendHeader("Access-Control-Allow-Origin", "*");
   server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
 }
 
-void handleRoot() {
-  sendCORSHeaders();
-  String html = "<html><head><title>AeroVigil ESP32 Pan-Tilt</title></head>";
-  html += "<body style='font-family:sans-serif;background:#051321;color:#fff;text-align:center;padding:40px;'>";
-  html += "<h2>🛸 AeroVigil X - ESP32 Pan-Tilt Servo Controller</h2>";
-  html += "<p>Pan Pin: GPIO 12 | Tilt Pin: GPIO 13</p>";
-  html += "<p>Status: <b style='color:#00ff88;'>ONLINE</b></p>";
-  html += "<p>Current Pan: <b>" + String(currentPan) + "°</b> | Tilt: <b>" + String(currentTilt) + "°</b></p>";
-  html += "</body></html>";
-  server.send(200, "text/html", html);
-}
-
-void handleStatus() {
-  sendCORSHeaders();
-  String json = "{\"status\":\"ONLINE\",\"pan\":" + String(currentPan) + ",\"tilt\":" + String(currentTilt) + ",\"pan_pin\":12,\"tilt_pin\":13}";
-  server.send(200, "application/json", json);
-}
-
 void handlePTZ() {
   sendCORSHeaders();
   
   if (server.hasArg("pan")) {
-    int targetPan = server.arg("pan").toInt();
-    targetPan = constrain(targetPan, 0, 180);
-    currentPan = targetPan;
-    panServo.write(currentPan);
+    int p = server.arg("pan").toInt();
+    writePan(p);
   }
 
   if (server.hasArg("tilt")) {
-    int targetTilt = server.arg("tilt").toInt();
-    targetTilt = constrain(targetTilt, 0, 180);
-    currentTilt = targetTilt;
-    tiltServo.write(currentTilt);
+    int t = server.arg("tilt").toInt();
+    writeTilt(t);
   }
 
-  Serial.printf("[SERVO MOVE] Pan (GPIO 12): %d° | Tilt (GPIO 13): %d°\n", currentPan, currentTilt);
+  String json = "{\"status\":\"OK\",\"pan\":" + String(currentPan) + ",\"tilt\":" + String(currentTilt) + "}";
+  server.send(200, "application/json", json);
+}
 
-  String json = "{\"success\":true,\"pan\":" + String(currentPan) + ",\"tilt\":" + String(currentTilt) + "}";
+void handleStatus() {
+  sendCORSHeaders();
+  String json = "{\"status\":\"ONLINE\",\"module\":\"ESP32_DevKit\",\"pan\":" + String(currentPan) + ",\"tilt\":" + String(currentTilt) + "}";
   server.send(200, "application/json", json);
 }
 
@@ -96,46 +106,47 @@ void handleNotFound() {
 void setup() {
   Serial.begin(115200);
   delay(1000);
-  Serial.println("\n--- AeroVigil X ESP32 Pan-Tilt Starting ---");
+  Serial.println("\n==========================================");
+  Serial.println("AeroVigil X — ESP32 DevKit Pan-Tilt Servo Setup");
+  Serial.println("==========================================");
 
-  // Allocate timers for ESP32Servo
-  ESP32PWM::allocateTimer(0);
-  ESP32PWM::allocateTimer(1);
-  ESP32PWM::allocateTimer(2);
-  ESP32PWM::allocateTimer(3);
+  // Configure Native ESP32 LEDC PWM Channels
+#if ESP_IDF_VERSION_MAJOR >= 5
+  ledcAttach(PAN_PIN, PWM_FREQ, PWM_RES);
+  ledcAttach(TILT_PIN, PWM_FREQ, PWM_RES);
+#else
+  ledcSetup(PAN_CHANNEL, PWM_FREQ, PWM_RES);
+  ledcSetup(TILT_CHANNEL, PWM_FREQ, PWM_RES);
+  ledcAttachPin(PAN_PIN, PAN_CHANNEL);
+  ledcAttachPin(TILT_PIN, TILT_CHANNEL);
+#endif
 
-  // Attach Servo Motors to GPIO 12 & 13
-  panServo.setPeriodHertz(50); // Standard 50Hz Servo
-  tiltServo.setPeriodHertz(50);
+  // TEST SWEEP ON STARTUP to verify hardware connection!
+  Serial.println("Testing Servo Motor Movement (Self-Test Sweep)...");
+  writePan(45);  writeTilt(30); delay(600);
+  writePan(135); writeTilt(90); delay(600);
+  writePan(90);  writeTilt(45); delay(600);
+  Serial.println("Self-Test Complete! Servos set to Center (90°, 45°).");
 
-  panServo.attach(PAN_PIN, 500, 2400);   // GPIO 12
-  tiltServo.attach(TILT_PIN, 500, 2400); // GPIO 13
-
-  // Set initial position
-  panServo.write(currentPan);
-  tiltServo.write(currentTilt);
-
-  // Connect to Wi-Fi
+  // Connect Wi-Fi
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
-  Serial.print("Connecting to Wi-Fi");
+  Serial.print("Connecting Wi-Fi");
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
 
-  Serial.println("\n[Wi-Fi Connected!]");
-  Serial.print("ESP32 IP Address: ");
+  Serial.println("\n[Wi-Fi CONNECTED SUCCESS!]");
+  Serial.print("ESP32 Local IP Address: ");
   Serial.println(WiFi.localIP());
 
-  // Setup Server Endpoints
-  server.on("/", handleRoot);
-  server.on("/api/status", handleStatus);
   server.on("/api/ptz", handlePTZ);
+  server.on("/api/status", handleStatus);
   server.onNotFound(handleNotFound);
 
   server.begin();
-  Serial.println("HTTP Server Started on port 80");
+  Serial.println("AeroVigil WebServer Active on Port 80");
 }
 
 void loop() {
