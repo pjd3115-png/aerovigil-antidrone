@@ -347,6 +347,55 @@
           </div>
         </div>
 
+        <!-- ESP32 DEVKIT SERVO MOTOR CONTROLLER DECK (GPIO 12 & 13) -->
+        <div class="esp32-servo-deck" style="margin-top:14px;background:#051727;border:1px solid #0d5482;border-radius:12px;padding:18px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;border-bottom:1px solid #0c3e61;padding-bottom:10px">
+            <h3 style="margin:0;font-size:16px;color:var(--cyan);display:flex;align-items:center;gap:8px">
+              ⚙ ESP32 DevKit Pan-Tilt Servo Motor Controller
+            </h3>
+            <span id="esp32ServoStatus" style="font-size:11px;font-weight:700;color:var(--green)">CONNECTED (GPIO 12 & 13)</span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+            <div style="background:#03101d;padding:14px;border-radius:10px;border:1px solid #093757">
+              <div style="font-size:12px;color:#8fa3b5;font-weight:700;margin-bottom:10px">🎯 LIVE SERVO MOTOR READOUTS</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+                <div style="background:#061b2e;padding:10px;border-radius:8px;border:1px solid #0e4c78;text-align:center">
+                  <span style="font-size:10px;color:#8fa3b5;display:block">PAN SERVO (GPIO 12)</span>
+                  <b id="esp32PanVal" style="font-size:22px;color:var(--cyan)">90°</b>
+                </div>
+                <div style="background:#061b2e;padding:10px;border-radius:8px;border:1px solid #0e4c78;text-align:center">
+                  <span style="font-size:10px;color:#8fa3b5;display:block">TILT SERVO (GPIO 13)</span>
+                  <b id="esp32TiltVal" style="font-size:22px;color:var(--yellow)">45°</b>
+                </div>
+              </div>
+              <div style="font-size:11px;color:#799cad;line-height:1.5">
+                • <b>Pan Pin:</b> GPIO 12 (Horizontal 0° - 180°)<br>
+                • <b>Tilt Pin:</b> GPIO 13 (Vertical 0° - 180°)<br>
+                • <b>Hardware Module:</b> ESP32 DevKit V1
+              </div>
+            </div>
+
+            <div style="background:#03101d;padding:14px;border-radius:10px;border:1px solid #093757;display:flex;flex-direction:column;align-items:center;justify-content:center">
+              <div style="font-size:12px;color:#8fa3b5;font-weight:700;margin-bottom:10px">🎮 ON-SCREEN PTZ JOYSTICK CONTROLS</div>
+              
+              <div style="display:grid;grid-template-columns:repeat(3,44px);gap:8px;place-items:center">
+                <div></div>
+                <button onclick="stepEsp32Servo(0, -10)" style="width:44px;height:44px;border-radius:8px;border:1px solid var(--cyan);background:#072842;color:#fff;font-size:16px;font-weight:bold" title="Tilt Up">▲</button>
+                <div></div>
+
+                <button onclick="stepEsp32Servo(-15, 0)" style="width:44px;height:44px;border-radius:8px;border:1px solid var(--cyan);background:#072842;color:#fff;font-size:16px;font-weight:bold" title="Pan Left">◄</button>
+                <button onclick="centerEsp32Servo()" style="width:44px;height:44px;border-radius:8px;border:1px solid var(--yellow);background:#332909;color:var(--yellow);font-size:11px;font-weight:bold" title="Center 90°/45°">🎯</button>
+                <button onclick="stepEsp32Servo(15, 0)" style="width:44px;height:44px;border-radius:8px;border:1px solid var(--cyan);background:#072842;color:#fff;font-size:16px;font-weight:bold" title="Pan Right">►</button>
+
+                <div></div>
+                <button onclick="stepEsp32Servo(0, 10)" style="width:44px;height:44px;border-radius:8px;border:1px solid var(--cyan);background:#072842;color:#fff;font-size:16px;font-weight:bold" title="Tilt Down">▼</button>
+                <div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
           <div class="feed-card" style="height:260px">
             <span class="feed-badge" style="color:var(--green)">● High Definition EO Visual Stream (1080p PTZ)</span>

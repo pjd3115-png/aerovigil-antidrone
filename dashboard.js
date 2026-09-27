@@ -948,3 +948,65 @@ function startEsp32Detection() {
     }, 1500);
 }
 
+/* -------------------------------------------------------------
+ * ESP32 DEVKIT PAN-TILT SERVO MOTOR CONTROLLER (GPIO 12 & 13)
+ * ------------------------------------------------------------- */
+let esp32PanAngle = 90;   // Pan Servo on GPIO 12
+let esp32TiltAngle = 45;  // Tilt Servo on GPIO 13
+
+function sendEsp32ServoCommand(panDeg, tiltDeg) {
+    const ipInput = document.getElementById("esp32Ip") || document.getElementById("esp32ServoIp");
+    if (!ipInput) return;
+
+    let ip = ipInput.value.trim();
+    if (!ip) {
+        if (typeof toast === 'function') toast("Please enter ESP32 IP address");
+        return;
+    }
+
+    esp32PanAngle = Math.max(0, Math.min(180, Math.round(panDeg)));
+    esp32TiltAngle = Math.max(0, Math.min(180, Math.round(tiltDeg)));
+
+    // Update UI Readouts
+    const panEl = document.getElementById("esp32PanVal");
+    const tiltEl = document.getElementById("esp32TiltVal");
+    if (panEl) panEl.textContent = esp32PanAngle + "°";
+    if (tiltEl) tiltEl.textContent = esp32TiltAngle + "°";
+
+    // Sync 3D tower camera angle
+    if (window.threeEngineDashboard && typeof window.threeEngineDashboard.setPTZ === 'function') {
+        window.threeEngineDashboard.setPTZ(esp32PanAngle, esp32TiltAngle);
+    }
+
+    // Send HTTP REST command to ESP32 DevKit module
+    const url = `http://${ip}/api/ptz?pan=${esp32PanAngle}&tilt=${esp32TiltAngle}`;
+    fetch(url, { mode: 'cors' })
+        .then(res => res.json())
+        .then(data => {
+            const statusEl = document.getElementById("esp32ServoStatus");
+            if (statusEl) {
+                statusEl.textContent = "CONNECTED (GPIO 12 & 13)";
+                statusEl.style.color = "#00ff88";
+            }
+            if (typeof toast === 'function') toast(`Servo Moved: Pan ${esp32PanAngle}° (GPIO 12) | Tilt ${esp32TiltAngle}° (GPIO 13)`);
+        })
+        .catch(err => {
+            const statusEl = document.getElementById("esp32ServoStatus");
+            if (statusEl) {
+                statusEl.textContent = "COMMUNICATION ERR";
+                statusEl.style.color = "#ff4d64";
+            }
+            console.warn("ESP32 Servo Fetch Warning:", err);
+            if (typeof toast === 'function') toast(`Command sent to Pan ${esp32PanAngle}° | Tilt ${esp32TiltAngle}°`);
+        });
+}
+
+function stepEsp32Servo(deltaPan, deltaTilt) {
+    sendEsp32ServoCommand(esp32PanAngle + deltaPan, esp32TiltAngle + deltaTilt);
+}
+
+function centerEsp32Servo() {
+    sendEsp32ServoCommand(90, 45);
+}
+
+
