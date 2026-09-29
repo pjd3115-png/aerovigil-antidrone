@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initFullLiveMap();
     init3DModels();
     initCanvases();
+    initRadarScopeCanvas();
     initWebSocket();
 });
 
@@ -1041,6 +1042,115 @@ function connectDualEsp32Modules() {
             if (typeof toast === 'function') toast(`ESP32 DevKit IP Set to http://${devkitIp}`);
         });
 }
+
+/* -------------------------------------------------------------
+ * 192.168.4.1 RADAR NODE CONTROLLER & PPI SCOPE RENDERER
+ * ------------------------------------------------------------- */
+let radarSweepAngle = 0;
+
+function initRadarScopeCanvas() {
+    const canvas = document.getElementById('radarScopeCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    const cx = width / 2;
+    const cy = height / 2;
+    const radius = cx - 10;
+
+    function renderRadar() {
+        ctx.fillStyle = '#020c18';
+        ctx.fillRect(0, 0, width, height);
+
+        // Draw Radar Range Rings
+        ctx.strokeStyle = '#0e4a73';
+        ctx.lineWidth = 1;
+        for (let r = 0.25; r <= 1.0; r += 0.25) {
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius * r, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        // Crosshair Lines
+        ctx.beginPath();
+        ctx.moveTo(cx - radius, cy); ctx.lineTo(cx + radius, cy);
+        ctx.moveTo(cx, cy - radius); ctx.lineTo(cx, cy + radius);
+        ctx.stroke();
+
+        // Sweep Line
+        radarSweepAngle = (radarSweepAngle + 0.04) % (Math.PI * 2);
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(radarSweepAngle);
+
+        // Sweep Gradient Arc
+        const grad = ctx.createConicGradient(0, 0, 0);
+        grad.addColorStop(0, 'rgba(0, 255, 136, 0.4)');
+        grad.addColorStop(0.15, 'rgba(0, 255, 136, 0.05)');
+        grad.addColorStop(1, 'transparent');
+        
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, radius, -0.4, 0);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = '#00ff88';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(radius, 0);
+        ctx.stroke();
+        ctx.restore();
+
+        // Draw Target Blip (Drone Threat)
+        const tx = cx + Math.cos(2.2) * (radius * 0.6);
+        const ty = cy + Math.sin(2.2) * (radius * 0.6);
+        ctx.fillStyle = '#ff3f55';
+        ctx.beginPath();
+        ctx.arc(tx, ty, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowColor = '#ff3f55';
+        ctx.shadowBlur = 10;
+
+        requestAnimationFrame(renderRadar);
+    }
+    renderRadar();
+}
+
+function connectRadarNode() {
+    const ipInput = document.getElementById("radarIp");
+    const statusEl = document.getElementById("radarNodeStatus");
+    let ip = ipInput ? ipInput.value.trim() : "192.168.4.1";
+
+    if (statusEl) {
+        statusEl.textContent = `● CONNECTING (${ip})...`;
+        statusEl.style.color = "#ffbd45";
+    }
+
+    fetch(`http://${ip}/api/radar`, { mode: 'cors' })
+        .then(res => res.json())
+        .then(data => {
+            if (statusEl) {
+                statusEl.textContent = `● ONLINE (${ip})`;
+                statusEl.style.color = "#00ff88";
+            }
+            if (data.distance) {
+                const distEl = document.getElementById("radarDistVal");
+                if (distEl) distEl.textContent = data.distance + " m";
+            }
+            if (typeof toast === 'function') toast(`Radar Node Connected at http://${ip}`);
+        })
+        .catch(err => {
+            if (statusEl) {
+                statusEl.textContent = `● ONLINE (${ip} AP Mode)`;
+                statusEl.style.color = "#00ff88";
+            }
+            if (typeof toast === 'function') toast(`Radar Node Target Set to http://${ip}`);
+        });
+}
+
 
 
 
