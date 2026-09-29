@@ -923,30 +923,140 @@ function connectEsp32Camera() {
     if (typeof toast === 'function') toast(`Connecting to ESP32-CAM at http://${ip}/stream ...`);
 }
 
+let cocoModel = null;
+let aiDetectionRunning = false;
+let isWebcamMode = false;
+let webcamStream = null;
+
+// Initialize TensorFlow.js COCO-SSD Neural Network Model
+if (typeof cocoSsd !== 'undefined') {
+    cocoSsd.load().then(model => {
+        cocoModel = model;
+        console.log("[TensorFlow.js] COCO-SSD AI Object Detection Neural Network Model Loaded!");
+    }).catch(err => {
+        console.warn("COCO-SSD Model Load Warning:", err);
+    });
+}
+
 function startEsp32Detection() {
     const statusEl = document.getElementById("esp32DetectionStatus");
-    const objEl = document.getElementById("esp32Object");
-    const confEl = document.getElementById("esp32Confidence");
     const scanBox = document.getElementById("esp32ScanBox");
 
+    aiDetectionRunning = true;
     if (statusEl) {
-        statusEl.innerHTML = "AI Object Detection Running...";
+        statusEl.innerHTML = "TensorFlow.js Real AI Object Detection Active (COCO-SSD)";
         statusEl.style.color = "#00ff88";
     }
+    if (scanBox) scanBox.style.display = "none";
+    if (typeof toast === 'function') toast("Real TensorFlow.js AI Neural Net Detection Started!");
 
-    if (scanBox) {
-        scanBox.style.display = "block";
+    if (!cocoModel && typeof cocoSsd !== 'undefined') {
+        if (statusEl) statusEl.innerHTML = "Loading Neural Net Model...";
+        cocoSsd.load().then(model => {
+            cocoModel = model;
+            runRealAIDetectionLoop();
+        });
+    } else {
+        runRealAIDetectionLoop();
     }
+}
 
-    if (objEl) objEl.innerHTML = "Scanning Targets...";
-    if (confEl) confEl.innerHTML = "--";
-    if (typeof toast === 'function') toast("ESP32-CAM AI Object Detection Started");
+function runRealAIDetectionLoop() {
+    if (!aiDetectionRunning) return;
 
-    setTimeout(() => {
-        if (objEl) objEl.innerHTML = "🎯 Threat Drone / Water Bottle";
-        if (confEl) confEl.innerHTML = "98.4%";
-        if (statusEl) statusEl.innerHTML = "AI Target Lock Active (ESP32-CAM)";
-    }, 1500);
+    const imgElem = isWebcamMode ? document.getElementById("webcamVideo") : document.getElementById("esp32Camera");
+    const canvas = document.getElementById("aiCanvas");
+    if (!imgElem || !canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    canvas.width = imgElem.clientWidth || 640;
+    canvas.height = imgElem.clientHeight || 480;
+
+    if (cocoModel && (imgElem.complete || isWebcamMode) && imgElem.clientWidth > 0) {
+        cocoModel.detect(imgElem).then(predictions => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const objEl = document.getElementById("esp32Object");
+            const confEl = document.getElementById("esp32Confidence");
+
+            if (predictions.length > 0) {
+                const topPred = predictions[0];
+                const pct = (topPred.score * 100).toFixed(1) + "%";
+                let labelName = topPred.class.toUpperCase();
+
+                if (objEl) objEl.innerHTML = `🎯 ${labelName}`;
+                if (confEl) confEl.innerHTML = pct;
+
+                predictions.forEach(pred => {
+                    const [x, y, w, h] = pred.bbox;
+                    const scaleX = canvas.width / (imgElem.naturalWidth || imgElem.videoWidth || imgElem.clientWidth);
+                    const scaleY = canvas.height / (imgElem.naturalHeight || imgElem.videoHeight || imgElem.clientHeight);
+
+                    const rx = x * scaleX;
+                    const ry = y * scaleY;
+                    const rw = w * scaleX;
+                    const rh = h * scaleY;
+
+                    // Draw Bounding Box
+                    ctx.strokeStyle = "#00ff88";
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(rx, ry, rw, rh);
+
+                    // Draw Label Tag
+                    ctx.fillStyle = "rgba(0, 255, 136, 0.85)";
+                    ctx.fillRect(rx, Math.max(0, ry - 22), ctx.measureText(pred.class.toUpperCase()).width + 45, 22);
+
+                    ctx.fillStyle = "#000000";
+                    ctx.font = "bold 12px monospace";
+                    ctx.fillText(`${pred.class.toUpperCase()} ${(pred.score * 100).toFixed(1)}%`, rx + 5, Math.max(14, ry - 6));
+                });
+            } else {
+                if (objEl) objEl.innerHTML = "Scanning Targets...";
+                if (confEl) confEl.innerHTML = "--";
+            }
+
+            if (aiDetectionRunning) {
+                requestAnimationFrame(runRealAIDetectionLoop);
+            }
+        }).catch(err => {
+            if (aiDetectionRunning) requestAnimationFrame(runRealAIDetectionLoop);
+        });
+    } else {
+        if (aiDetectionRunning) {
+            setTimeout(runRealAIDetectionLoop, 300);
+        }
+    }
+}
+
+function toggleWebcamMode() {
+    const camImg = document.getElementById("esp32Camera");
+    const webcamVideo = document.getElementById("webcamVideo");
+    const btn = document.getElementById("webcamBtn");
+
+    if (!isWebcamMode) {
+        navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+            webcamStream = stream;
+            webcamVideo.srcObject = stream;
+            webcamVideo.style.display = "block";
+            camImg.style.display = "none";
+            isWebcamMode = true;
+            if (btn) btn.innerHTML = "📹 Switch to ESP32-CAM Stream";
+            esp32CameraOnline();
+            startEsp32Detection();
+            if (typeof toast === 'function') toast("WebCam Active - Real AI Object Detection Running!");
+        }).catch(err => {
+            alert("Webcam permission denied or unavailable: " + err.message);
+        });
+    } else {
+        if (webcamStream) {
+            webcamStream.getTracks().forEach(track => track.stop());
+        }
+        webcamVideo.style.display = "none";
+        camImg.style.display = "block";
+        isWebcamMode = false;
+        if (btn) btn.innerHTML = "📷 Use Laptop/Phone WebCam AI";
+        if (typeof toast === 'function') toast("Switched to ESP32-CAM Stream");
+    }
 }
 
 /* -------------------------------------------------------------

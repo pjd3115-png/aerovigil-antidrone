@@ -14,6 +14,10 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 
+<!-- TensorFlow.js & COCO-SSD Real Object Detection AI Model -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+
 <!-- Local Styles & Scripts -->
 <link rel="stylesheet" href="dashboard.css" />
 <script src="three-mast.js"></script>
@@ -311,14 +315,17 @@
           </div>
 
           <div class="video-container-esp32" style="position:relative;width:100%;background:#000;border-radius:10px;overflow:hidden;min-height:280px;display:flex;justify-content:center;align-items:center;border:1px solid #114c73">
-            <img id="esp32Camera" src="http://192.168.43.12/stream" alt="ESP32-CAM Live Stream" style="width:100%;max-height:480px;object-fit:contain;display:block" onload="esp32CameraOnline()" onerror="esp32CameraOffline()">
+            <img id="esp32Camera" src="http://192.168.43.12/stream" alt="ESP32-CAM Live Stream" crossorigin="anonymous" style="width:100%;max-height:480px;object-fit:contain;display:block" onload="esp32CameraOnline()" onerror="esp32CameraOffline()">
+            <video id="webcamVideo" style="display:none;width:100%;max-height:480px;object-fit:contain" autoplay playsinline muted></video>
+            <canvas id="aiCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10"></canvas>
             <div class="scan-box" id="esp32ScanBox" style="position:absolute;width:240px;height:160px;border:2px solid #00ff88;display:none;pointer-events:none;box-shadow:0 0 15px #00ff88;animation:pulseScan 2s infinite ease-in-out;"></div>
           </div>
 
           <div class="controls-esp32" style="margin-top:14px;display:flex;gap:12px;flex-wrap:wrap;align-items:center">
-            <input id="esp32Ip" value="192.168.43.12" placeholder="ESP32-CAM IP (e.g. 192.168.43.12)" style="flex:1;min-width:220px;padding:10px 14px;border-radius:8px;border:1px solid #1c5d87;background:#051321;color:#fff;font-size:13px;font-weight:600">
-            <button onclick="connectEsp32Camera()" style="border:0;padding:10px 18px;border-radius:8px;background:#00a86b;color:white;cursor:pointer;font-weight:bold;font-size:13px">Connect Camera</button>
-            <button onclick="startEsp32Detection()" style="border:0;padding:10px 18px;border-radius:8px;background:#087eb0;color:white;cursor:pointer;font-weight:bold;font-size:13px">Start AI Detection</button>
+            <input id="esp32Ip" value="192.168.43.12" placeholder="ESP32-CAM IP (e.g. 192.168.43.12)" style="flex:1;min-width:200px;padding:10px 14px;border-radius:8px;border:1px solid #1c5d87;background:#051321;color:#fff;font-size:13px;font-weight:600">
+            <button onclick="connectEsp32Camera()" style="border:0;padding:10px 18px;border-radius:8px;background:#00a86b;color:white;cursor:pointer;font-weight:bold;font-size:13px">Connect ESP32-CAM</button>
+            <button onclick="startEsp32Detection()" style="border:0;padding:10px 18px;border-radius:8px;background:#087eb0;color:white;cursor:pointer;font-weight:bold;font-size:13px">Start Real AI Detection</button>
+            <button onclick="toggleWebcamMode()" id="webcamBtn" style="border:0;padding:10px 18px;border-radius:8px;background:#6e1078;color:white;cursor:pointer;font-weight:bold;font-size:13px">📷 Use Laptop/Phone WebCam AI</button>
           </div>
 
           <div class="info-esp32" style="margin-top:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
